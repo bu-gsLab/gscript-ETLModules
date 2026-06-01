@@ -1,0 +1,98 @@
+# Load this file with the line:
+#
+# LOADCONFIG "" "Scripts\ETLModules\Hybrid V4\H4_Config.txt"
+#
+
+
+# Chip assignments
+chip_assy.1: 3
+chip_assy.2: 1
+chip_assy.3: 2
+chip_assy.4: 0
+chip_assy.5: 3
+chip_assy.6: 1
+chip_assy.7: 2
+chip_assy.8: 0
+chip_assy.9: 3
+chip_assy.10: 1
+chip_assy.11: 2
+chip_assy.12: 0
+chip_assy.13: 3
+chip_assy.14: 1
+chip_assy.15: 2
+chip_assy.16: 0
+
+
+
+#tr == 1, br == 2, bl == 3, tl == 4
+#ETROC 2 fiducial markers.
+#   top-left and top-right are ETROC mask corners
+#   bottom-left and bottom-right are LGAD corners
+# The part center is the center of the ETROC on it's top face
+geometry.HYBRID.fid_tr: {10.5,-11.5,0}
+geometry.HYBRID.fid_tl: {-10.5,-11.5,0}
+geometry.HYBRID.fid_bl: {-10.75,11.62,-0.190}
+geometry.HYBRID.fid_br: {10.75,11.62,-0.190}
+
+#geometry of baseplate Fiducials are corners and
+# top of top-right chamfer
+geometry.BP.fid_tr: {20.05,-28.75,0}
+geometry.BP.fid_tl: {-22.05,-28.75,0}
+geometry.BP.fid_bl: {-22.05,28.75,0}
+geometry.BP.fid_br: {22.05,28.75,0}
+
+#throuhput PCB geometries (Original)
+geometry.Module_PCB.fid_tr: {7.54,-27.85,0}
+geometry.Module_PCB.fid_tl: {-15.01,-27.95,0}
+geometry.Module_PCB.fid_bl: {-7.54,27.85,0}
+geometry.Module_PCB.fid_br: {15.01,27.95,0}
+
+#throuhput PCB geometries (Fine tuned)
+# geometry.Module_PCB.fid_tr: {7.44,-27.89,0}
+# geometry.Module_PCB.fid_tl: {-15.11,-27.99,0}
+# geometry.Module_PCB.fid_bl: {-7.64,27.89,0}
+# geometry.Module_PCB.fid_br: {14.91,27.99,0}
+
+#relative positions of where the sub-assemblies will go on the Module PCB
+geometry.Module_PCB.ETROC_0: {10.9,11.7,0}   # br
+geometry.Module_PCB.ETROC_1: {10.9,-11.7,0}  # tr
+geometry.Module_PCB.ETROC_2: {-10.9,11.7,0}  # bl
+geometry.Module_PCB.ETROC_3: {-10.9,-11.7,0} # tl
+
+# Compensate for ETROC thickness when calculating target positions.
+hybrid_thickness: 0.95
+lgad_thickness: 0.2
+etroc_thickness: 0.75
+baseplate_thickness: 0.5
+
+vision.PCBV4.method: find_patches
+vision.PCBV4.dilateSize: 6
+vision.PCBV4.sizeMin: 0.080000
+vision.PCBV4.sizeMax: 0.120000
+vision.PCBV4.aspectRatioMin: 0.900000
+vision.PCBV4.aspectRatioMax: 1.100000
+vision.PCBV4.colorGroups: 5
+
+# Bottom-left corner
+vision.ETROC_3.method: find_template
+vision.ETROC_3.templateBlurFactor: 0.000000
+vision.ETROC_3.minConcurrence: 0.000000
+vision.ETROC_3.templatePath: "Scripts\ETLModules\Digital V4\ETROC_bl_template.png"
+
+# Bottom-right corner
+vision.ETROC_2.method: find_template
+vision.ETROC_2.templateBlurFactor: 0.000000
+vision.ETROC_2.minConcurrence: 0.000000
+vision.ETROC_2.templatePath: "Scripts\ETLModules\Digital V4\ETROC_br_template.png"
+
+# Top-left corner
+vision.ETROC_4.method: find_template
+vision.ETROC_4.templateBlurFactor: 0.000000
+vision.ETROC_4.minConcurrence: 0.000000
+vision.ETROC_4.templatePath: "Scripts\ETLModules\Digital V4\ETROC_tl_template.png"
+
+# Top-right corner
+vision.ETROC_1.method: find_template
+vision.ETROC_1.templateBlurFactor: 0.000000
+vision.ETROC_1.minConcurrence: 0.000000
+vision.ETROC_1.templatePath: "Scripts\ETLModules\Digital V4\ETROC_tr_template.png"

@@ -29,14 +29,14 @@ geometry.Module_PCB.fid_bl: {-19.55,26.741,0}
 geometry.Module_PCB.fid_br: {19.55,26.741,0}
 
 #relative positions of where the sub-assemblies will go on the Module PCB
-geometry.Module_PCB.A: {-10.8,-11.05,0}
-geometry.Module_PCB.B: {10.8,-11.05,0}
-geometry.Module_PCB.C: {-10.8,11.05,0}
-geometry.Module_PCB.D: {10.8,11.05,0}
+geometry.Module_PCB.A: {-11,-11.25,0}
+geometry.Module_PCB.B: {11,-11.25,0}
+geometry.Module_PCB.C: {-11,11.25,0}
+geometry.Module_PCB.D: {11,11.25,0}
 
 # Set to zero while not using LGAD mockups
-# thickness.top: {0,0,0.6}
-thickness.top: {0,0,0}
+thickness.top: {0,0,0.6}
+#thickness.top: {0,0,0}
 
 #Pattern Recognition Parameters
 vision.ETROC.method: find_patches
@@ -51,6 +51,12 @@ vision.throughput_pcb.method: find_template
 vision.throughput_pcb.templateBlurFactor: 0.000000
 vision.throughput_pcb.minConcurrence: 0.000000
 vision.throughput_pcb.templatePath: Scripts\ETLModules\ThroughPut\fiducial_reference_1.png
+
+
+vision.etl_throughput_etroc.method: find_template
+vision.etl_throughput_etroc.templateBlurFactor: 0.000000
+vision.etl_throughput_etroc.minConcurrence: 0.000000
+vision.etl_throughput_etroc.templatePath: Scripts\ETLModules\ThroughPut\fiducial_reference_1.png
 
 vision.throughput_baseplate.method: find_template
 vision.throughput_baseplate.templateBlurFactor: 10

@@ -1,15 +1,16 @@
-VERSION v2.8
+VERSION v2.9
 SETLOG "TP_BP_Assy_{timestamp}.txt"
 CLEARLOG
+CLEARVARS
 LOADCONFIG
-LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
-LOADCONFIG "" Config\ETL\TP_Site_Config.txt
+LOADCONFIG "" "Scripts\ETLModules\Hybrid V4\H4_Config.txt"
+LOADCONFIG "" Config\ETL\H4_Site_Config.txt
 
 
 DIALOG Scripts\ETLModules\Throughput\Baseplate_Assembly_Setup_Dialog.ini
 
-FLEXREAD $etroc_chuck_num chuck_number.top
-FLEXREAD $bp_chuck_num chuck_number.top
+FLEXREAD $etroc_chuck_num chuck_number.ETROC
+FLEXREAD $bp_chuck_num chuck_number.BP
 
 HOME if-needed
 
@@ -31,8 +32,7 @@ COPY $mod_idx 0
     CALL @SURVEY_PART_FROM_CONFIG $pcb_chuck_num $mod_idx 1 -> $pos $rot
     FLEXWRITE "pcb_init_pos_{$mod_idx}" $pos
     FLEXWRITE "pcb_init_rot_{$mod_idx}" $rot
-    # change below line to adjust vacuum 
-    FLEXWRITE "bp_pos_idx_{$mod_idx}" 16
+    FLEXWRITE "bp_pos_idx_{$mod_idx}" `$mod_idx+4`
 
     GOTO @PCB_SURVEY_LOOP_START
 @PCB_SURVEY_LOOP_END
@@ -48,7 +48,7 @@ COPY $mod_idx 0
 
     PRINT "Begin Survey of Baseplate %d" $mod_idx
     FLEXREAD $bp_pos_idx "bp_pos_idx_{$mod_idx}"
-    # Enable to use vacuum w/ baseplate stage
+    #TODO: Re-enable vacuum once dedicated plate is available
     # SETVAC "etl_chuck_{$bp_chuck_num}_pos_{$bp_pos_idx}" 1
 
     CALL @SURVEY_PART_FROM_CONFIG $bp_chuck_num $bp_pos_idx 2 -> $pos $rot
@@ -88,8 +88,10 @@ END
 #    pcb_chuck_num = chuck number of the Module PCB
 #    pcb_pos_num = position number of the Module PCB
 #    bp_chuck_num = chuck number of ETROC+LGAD subasssemblies
-    FLEXREAD $top_thickness thickness.top
-    MUL $top_offset $top_thickness {0,0,-1}
+
+    ADD $placement_vertical_offset &hybrid_thickness &baseplate_thickness
+
+    MUL $placement_vertical_offset $placement_vertical_offset -1
 
     #Puts relative alignment of subassemblies in gantry coordinates using Module PCB position
 
@@ -101,7 +103,7 @@ END
     FLEXREAD $bp_init_rot "bp_init_rot_{$bp_pos_idx}"
 
  
-    ADD $bp_target_pos $pcb_pos $top_offset
+    ADD $bp_target_pos $pcb_pos {0,0,$placement_vertical_offset}
 
     MOVENAME "etl_chuck_{$bp_chuck_num}" "" direct
     PICKPART $bp_init_pos $bp_init_rot "etl_chuck_{$bp_chuck_num}_pos_{$bp_pos_idx}"
@@ -140,7 +142,6 @@ END
     @SPC_END_LOAD
 
     CALL @SURVEY_PART $pos_default $rot_default $part_id -> $pos $phi
-    PRINT "Finished survey of part part_id=%d @ chuck %d pos %d: %v, rotation= %f degrees" $part_id $chuck_num $pos_num $pos $phi
     RETURN $pos $phi
 
 
@@ -192,10 +193,12 @@ END
     GOTOIF @FIT_BP `$part_id==2`
 
     @FIT_MODULE_PCB
-      FIT $pos $rot $_ Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      FIT $pos $rot $res Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      PRINT "PCB Found at pos=%v  rot=%q, %r res=%f" $pos $rot $rot $res
       GOTO @FINISH_SURVEY
     @FIT_BP
-      FIT $pos $rot $_ BP $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      FIT $pos $rot $res BP $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      PRINT "BP Found at pos=%v  rot=%q, %r res=%f" $pos $rot $rot $res
       GOTO @FINISH_SURVEY
 
     @FINISH_SURVEY
@@ -219,6 +222,9 @@ END
     SETERRORMODE setvar
     WAIT 100
     FINDFID $fid_position etl_throughput_etroc
+    MOVETO $fid_position
+    VIDEO
+    GETPOS $fid_position
     GOTOIF @manual_fiducial_acquisition $ERR
     SETERRORMODE default
     RETURN $fid_position

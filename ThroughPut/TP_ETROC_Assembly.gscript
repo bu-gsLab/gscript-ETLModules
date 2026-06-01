@@ -2,9 +2,10 @@
 # on position 1, 5, 9, and 13 (ie row 1), while Module PCB position 2 will use 
 # positions 2, 6, 10, and 14, and so on for Module PCB position 3 and 4
 
-VERSION v2.7
+VERSION v2.9
 SETLOG TP_ETROC_Assy_{timestamp}.txt
 CLEARLOG
+CLEARVARS
 LOADCONFIG
 LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
 LOADCONFIG "" Config\ETL\TP_Site_Config.txt
@@ -29,6 +30,14 @@ COPY $mod_idx 0
     PRINT "Begin Survey of Module PCB %d, ID=%d" $mod_idx &id_{$mod_idx}
 
     CALL @SURVEY_PART_FROM_CONFIG $pcb_chuck_num $mod_idx 1 -> $pos $rot
+    EULER2QUAT $rot_q $rot 0 0
+    PRINT "Found Module PCB in position {$mod_idx:%d} at {$pos:%.3v} with rotation {$rot:%.3r}"
+
+    CHOICEPOPUP $do_survey "Survey the Module PCB?"
+    GOTOIFN @SKIP_PCB_SURVEY $do_survey
+    SURVEY $pos 46 59 low "ETL_PCB_{$mod_idx:%04d}.png"
+    @SKIP_PCB_SURVEY
+
     COPY &pcb_init_pos_{$mod_idx} $pos
     COPY &pcb_init_rot_{$mod_idx} $rot
 
@@ -58,6 +67,9 @@ COPY $mod_idx 0
         ADD $chip_loc $loc_offset $mod_idx 
         SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_loc} 1
         CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_loc 2 -> $pos $rot
+
+        EULER2QUAT $rot_q $rot 0 0
+        PRINT "Found Hybrid in position {$chip_loc:%d} at {$pos:%.3v} with rotation {$rot:%.3r}"
 
         # Chips idx 3 and 4 are rotated 180 degrees.
         # Pretend they are actually not rotated since they are staged at the same orientation 
@@ -103,7 +115,7 @@ COPY $mod_idx 0
 
 UNLOADTOOL
 
-SETVAC etl_chuck_{$pcb_chuck_num} 0  # vacuum for assembly plate
+# SETVAC etl_chuck_{$pcb_chuck_num} 0  # vacuum for assembly plate
 
 PRINT "Assembly Completed"
 MOVENAME home
@@ -157,7 +169,7 @@ END
     #  $pos - center of part
     #  $phi - rotation of part in x-y plane
 
-    SETLIGHT 40
+    SETLIGHT 15
 
     GOTOIF @SPC_MODULE_PCB `$part_id==1`
     GOTOIF @SPC_ETROC `$part_id==2`

@@ -1,0 +1,78 @@
+GETINTPOPUP $pcb_id "Nonzero part of serial number of pcb (MP40___)"
+SETLOG "PCB_height_survey_{$pcb_id}.txt"
+CLEARLOG
+LOADCONFIG
+
+PRINT "sn {$pcb_id}"
+COPY $pcb_tl {313.123080,420.078640,86.923894}
+
+GETINTPOPUP $num "Number of divisions in x,y"
+PRINT "num {$num}"
+SUB $num $num 1
+
+
+HOME if-needed
+
+MOVENAME etl_chuck_2
+
+MOVETO $pcb_tl 75
+
+VIDEO
+GETPOS $pcb_tl
+PRINT "tl {$pcb_tl:%v}"
+
+ADD $pcb_br $pcb_tl {44,57,0}
+MOVETO $pcb_br 75
+
+VIDEO
+GETPOS $pcb_br
+PRINT "br {$pcb_br:%v}"
+
+SUB $dif $pcb_br $pcb_tl
+
+INVERT $recip $num
+MUL $dx $dif.x $recip
+MUL $dy $dif.y $recip
+
+PRINT "dx {$dx:%f}"
+PRINT "dy {$dy:%f}"
+
+MOVETO $pcb_tl 75
+
+COPY $i 0
+COPY $j 0
+
+GETPOS $curr_pos
+
+GOTO @loop
+
+@next_row
+COPY $i 0
+GOTOIF @end_loop `$j>i=$num`
+INC $j
+
+
+@loop
+
+MUL $x_displacement $i $dx
+MUL $y_displacement $j $dy
+
+ADD $curr_pos $pcb_tl {$x_displacement,$y_displacement,0}
+MOVETO $curr_pos 75
+
+AUTOFOCUS $res 2 0 autoclose
+GETPOS $focused_pos
+print "pt {$i} {$j} {$focused_pos:%v}"
+
+GOTOIF @next_row `$i>i=$num`
+
+INC $i
+
+GOTO @loop
+
+@end_loop
+
+EXEC "python C:\Users\User\Desktop\gantry-config-bu\Scripts\BostonU\PCB_flatness_survey\fit_plane.py --moduleid {$pcb_id}"
+
+MOVENAME home
+

@@ -1,20 +1,21 @@
 # We assume that assembly on Module PCB position 1 will use ETROC+LGAD subassemblies
 # on position 1, 2, 3, 4 (ie row 1), while Module PCB position 2 will use 
 # positions 5, 6, 7, and 8, and so on for Module PCB position 3 and 4
+
 # Ships shall be staged such that the leftmost two chips have 
 # ETROC bondpads facing the rear of the gantry and the rightmost two
 # facing the front of the gantry
 
-VERSION v2.8
-SETLOG D4_ETROC_Assy_{timestamp}.txt
+VERSION v2.9
+SETLOG H4_ETROC_Assy_{timestamp}.txt
 CLEARLOG
 CLEARVARS
 LOADCONFIG
-LOADCONFIG "" "Scripts\ETLModules\Digital V4\D4_Config.txt"
-LOADCONFIG "" Config\ETL\D4_Site_Config.txt
+LOADCONFIG "" "Scripts\ETLModules\Hybrid V4\H4_Config.txt"
+LOADCONFIG "" Config\ETL\H4_Site_Config.txt
 
 
-DIALOG "Scripts\ETLModules\Digital V4\Assembly_Setup_Dialog.ini"
+DIALOG "Scripts\ETLModules\Hybrid V4\Assembly_Setup_Dialog.ini"
 
 HOME if-needed
 
@@ -33,11 +34,6 @@ COPY $mod_idx 0
     CALL @SURVEY_PART_FROM_CONFIG $pcb_chuck_num $mod_idx 1 -> $pos $rot
     COPY &pcb_init_pos_{$mod_idx} $pos
     COPY &pcb_init_rot_{$mod_idx} $rot
-
- #   TRANSFORML2G &etroc_target_pos_{$mod_idx}_0 &geometry.Module_PCB.ETROC_0 $pos $rot
- #   TRANSFORML2G &etroc_target_pos_{$mod_idx}_1 &geometry.Module_PCB.ETROC_1 $pos $rot
- #   TRANSFORML2G &etroc_target_pos_{$mod_idx}_2 &geometry.Module_PCB.ETROC_2 $pos $rot
- #   TRANSFORML2G &etroc_target_pos_{$mod_idx}_3 &geometry.Module_PCB.ETROC_3 $pos $rot
 
     GOTO @PCB_SURVEY_LOOP_START
 @PCB_SURVEY_LOOP_END
@@ -73,6 +69,8 @@ COPY $mod_idx 0
         COPY &etroc_init_rot_{$chip_loc} $rot
         COPY &etroc_init_pos_num_{$mod_idx}_{$chip_idx} $chip_loc
 
+        GOTOIF @ETROC_SURVEY_INNER_LOOP_END &single_hybrid
+
         GOTO @ETROC_SURVEY_INNER_LOOP_START
     @ETROC_SURVEY_INNER_LOOP_END
 
@@ -90,6 +88,7 @@ COPY $mod_idx 0
     PRINT "Begin pick-and-place for Module %d, ID=%d" $mod_idx &id_{$mod_idx}
 
     CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx 1 1    # ETROC 3
+    GOTOIF @ASSY_LOOP_START  &single_hybrid
     CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx 1 2    # ETROC 1
     CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx 1 3    # ETROC 2
     CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx 1 4    #ETROC 0
@@ -99,7 +98,7 @@ COPY $mod_idx 0
 
 UNLOADTOOL
 
-SETVAC etl_chuck_{$pcb_chuck_num} 0  # vacuum for assembly plate
+# SETVAC etl_chuck_{$pcb_chuck_num} 0  # vacuum for assembly plate
 
 PRINT "Assembly Completed"
 MOVENAME home
@@ -122,7 +121,12 @@ END
     FLEXREAD $chip_assignment chip_assy.{$etroc_pos_num}
     TRANSFORML2G $etroc_target_pos &geometry.Module_PCB.ETROC_{$chip_assignment} $pcb_pos $pcb_rot
 
+    # Account for lgad thickness for picking up the part
+    SUB $etroc_init_pos.z $etroc_init_pos.z &lgad_thickness
+
+    # Account for both etroc & lgad thickness when placing the part.
     SUB $etroc_target_pos.z $etroc_target_pos.z &etroc_thickness
+    SUB $etroc_target_pos.z $etroc_target_pos.z &lgad_thickness
 
     MOVENAME etl_chuck_{$etroc_chuck_num} "" direct
     PICKPART $etroc_init_pos $etroc_init_rot etl_chuck_{$etroc_chuck_num}_pos_{$etroc_init_pos_num}
@@ -166,13 +170,13 @@ END
     #  $chuck_num - 
     #  $pos_num - 
     #   part_id=1 => Module PCB
-    #   part_id=2 => ETROC
+    #   part_id=2 => HYBRID
     # Returns
     #  $pos - center of part
     #  $phi - rotation of part in x-y plane
 
     GOTOIF @SP_MODULE_PCB `$part_id==1`
-    GOTOIF @SP_ETROC `$part_id==2`
+    GOTOIF @SP_HYBRID `$part_id==2`
     
     @SP_MODULE_PCB
       COPY $tr_local &geometry.Module_PCB.fid_tr  
@@ -181,11 +185,11 @@ END
       COPY $br_local &geometry.Module_PCB.fid_br
     GOTO @SP_END_LOAD
 
-    @SP_ETROC
-      COPY $tr_local &geometry.ETROC.fid_tr  
-      COPY $tl_local &geometry.ETROC.fid_tl
-      COPY $bl_local &geometry.ETROC.fid_bl
-      COPY $br_local &geometry.ETROC.fid_br
+    @SP_HYBRID
+      COPY $tr_local &geometry.HYBRID.fid_tr  
+      COPY $tl_local &geometry.HYBRID.fid_tl
+      COPY $bl_local &geometry.HYBRID.fid_bl
+      COPY $br_local &geometry.HYBRID.fid_br
     GOTO @SP_END_LOAD
 
     @SP_END_LOAD
@@ -203,13 +207,15 @@ END
 
     # Turns measured corners or fiducials into center and orientation
     GOTOIF @FIT_MODULE_PCB `$part_id==1`
-    GOTOIF @FIT_ETROC `$part_id==2`
+    GOTOIF @FIT_HYBRID `$part_id==2`
 
     @FIT_MODULE_PCB
-      FIT $pos $rot $_ Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      FIT $pos $rot $res Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      PRINT "Located Module PCB at %v with rotation %q, %r degrees, fit residual=%f mm" $pos $rot $rot $res
       GOTO @FINISH_SURVEY
-    @FIT_ETROC
-      FIT $pos $rot $_ ETROC $tr_corrected $br_corrected $bl_corrected $tl_corrected
+    @FIT_HYBRID
+      FIT $pos $rot $res HYBRID $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      PRINT "Located Hybrid at %v with rotation %q, %r degrees, fit residual=%f mm" $pos $rot $rot $res
       GOTO @FINISH_SURVEY
 
     @FINISH_SURVEY
