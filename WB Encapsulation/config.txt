@@ -1,0 +1,4 @@
+# Process config for WB Encapsulation
+# Load with LOADCONFIG "" "Scripts\ETLModules\WB Encapsulation\config.txt"
+
+reference_image.needle_cal1: "Scripts\ETLModules\WB Encapsulation\needle_calibration_ref1.PNG"

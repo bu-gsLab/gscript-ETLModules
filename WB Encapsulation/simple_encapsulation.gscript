@@ -1,0 +1,76 @@
+# Basic encapsulation routine. Shows how to integrate the needle tip calibration into the procedure
+CLEARLOG
+LOADCONFIG
+LOADCONFIG "" "Scripts\ETLModules\WB Encapsulation\config.txt"
+HOME if-needed
+
+PRINT "Loading Needle"
+MOVENAME needle_load
+ALERT "Load the syringe into the holder and install a needle"
+LOADTOOL syringe_tool
+
+CHOICEPOPUP $choice "Recalibrate needle?"
+GOTOIFN @SKIP_CAL $choice
+CALL @NEEDLE_CAL -> $needle_offset
+PRINT "Found needle calibration offset: %.3v" $needle_offset
+GOTO @AFTER_CAL
+@SKIP_CAL
+COPY $needle_offset &potting.needle_cal_default
+@AFTER_CAL
+
+CALL @NEEDLE_PURGE
+
+MOVENAME etl_chuck_2
+copy $pot_start {313.870,422.909,75.154}
+copy  $pot_end {334.470,422.909,75.104}
+SUB $pot_pre_start $pot_start {0,0,5}
+MOVETO $pot_pre_start 50
+
+@AGAIN
+POTLINE $pot_start $pot_end $needle_offset
+CHOICEPOPUP $choice "Again?"
+GOTOIF @AGAIN $choice
+UNLOADTOOL
+
+END
+
+@NEEDLE_CAL()
+    MOVENAME needle_calibration
+    MOVETO &potting.needle_cal_pos 50
+    # Acquire position 1 with gantryhead cam looking at inverted needle tip
+    SETLIGHT 40
+    VIDEO "" needle_cal1
+    GETPOS $cal_pos_1
+
+    # Safely move to the pre-calibrated position with the loaded needle 2mm above the inverted needle tip
+    MOVETO {$cal_pos_1.x,$cal_pos_1.y,0} 50
+    SUB $cal_pos_2 $cal_pos_1 &potting.needle_cal_default
+    MOVETO {$cal_pos_2.x,$cal_pos_2.y,0} 50
+    SUB $cal_pos_2 $cal_pos_2 {0,0,2}
+    MOVETO $cal_pos_2 50
+    
+    # Now go between the two webcams to line up the two needle tips
+    @NEEDLE_CAL_P2_START
+    VIDEO needlecam1
+    VIDEO needlecam2
+    CHOICEPOPUP $choice "Do you want to continue adjusting the position?" "yes" "no"
+    GOTOIF @NEEDLE_CAL_P2_START $choice
+    GETPOS $cal_pos_2
+    MOVETO {$cal_pos_2.x,$cal_pos_2.y,0} 50
+    MOVENAME needle_calibration
+
+    SUB $needle_offset $cal_pos_1 $cal_pos_2
+    RETURN $needle_offset
+
+@NEEDLE_PURGE()
+    MOVENAME needle_load
+    @NEEDLE_PURGE_START
+    CHOICEPOPUP $choice "Purge needle for 1 second" "continue" "no, it's done"
+    GOTOIFN @NEEDLE_PURGE_END $choice
+    SETDISPENSE 1
+    WAIT 1000 # ms
+    SETDISPENSE 0
+    GOTO @NEEDLE_PURGE_START
+    @NEEDLE_PURGE_END
+    RETURN
+    
