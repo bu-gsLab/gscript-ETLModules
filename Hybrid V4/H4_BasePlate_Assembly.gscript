@@ -76,7 +76,7 @@ COPY $mod_idx 0
 
 UNLOADTOOL
 
-SETVAC "etl_chuck_{$pcb_chuck_num}" 0  # vacuum for assembly plate
+# SETVAC "etl_chuck_{$pcb_chuck_num}" 0  # vacuum for assembly plate
 
 PRINT "Assembly Completed"
 MOVENAME home

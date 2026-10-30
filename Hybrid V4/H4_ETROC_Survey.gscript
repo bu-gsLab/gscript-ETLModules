@@ -20,8 +20,6 @@ FLEXWRITE id_3 $id_3
 FLEXWRITE enabled_4 $enabled_4
 FLEXWRITE id_4 $id_4
 
-FLEXREAD $etroc_chuck_num chuck_number.top
-
 HOME if-needed
 
 PRINT "Survey Start"
@@ -41,41 +39,46 @@ COPY $mod_idx 0
 
     CALL @SURVEY_PART_FROM_CONFIG $pcb_chuck_num $mod_idx 1 -> $PCB_pos $PCB_rot
 
-    FLEXREAD $local_pos geometry.Module_PCB.A
+    SETLIGHT 10
+    FLEXREAD $local_pos geometry.Module_PCB.ETROC_3
+    SUB $local_pos.z $local_pos.z &etroc_thickness
     TRANSFORML2G $target_pos $local_pos $PCB_pos $PCB_rot  
     ADD $target_rot $PCB_rot 0
     CALL @SURVEY_PART $target_pos $target_rot 2 -> $measured_pos $measured_rot
-    PRINT "==Module {$mod_idx} | ETROC A=="
+    PRINT "==Module {$mod_idx} | ETROC 3=="
     CALL @PRINT_SURVEY_RESULTS $target_pos $target_rot $measured_pos $measured_rot
 
-    FLEXREAD $local_pos geometry.Module_PCB.B
+    FLEXREAD $local_pos geometry.Module_PCB.ETROC_1
+    SUB $local_pos.z $local_pos.z &etroc_thickness
     TRANSFORML2G $target_pos $local_pos $PCB_pos $PCB_rot  
     ADD $target_rot $PCB_rot 0
     CALL @SURVEY_PART $target_pos $target_rot 2 -> $measured_pos $measured_rot
-    PRINT "==Module {$mod_idx} | ETROC B=="
+    PRINT "==Module {$mod_idx} | ETROC 1=="
     CALL @PRINT_SURVEY_RESULTS $target_pos $target_rot $measured_pos $measured_rot
 
-    FLEXREAD $local_pos geometry.Module_PCB.C
+    FLEXREAD $local_pos geometry.Module_PCB.ETROC_2
+    SUB $local_pos.z $local_pos.z &etroc_thickness
     TRANSFORML2G $target_pos $local_pos $PCB_pos $PCB_rot  
-    ADD $target_rot $PCB_rot 0
+    ADD $target_rot $PCB_rot 180
     CALL @SURVEY_PART $target_pos $target_rot 2 -> $measured_pos $measured_rot
-    PRINT "==Module {$mod_idx} | ETROC C=="
+    PRINT "==Module {$mod_idx} | ETROC 2=="
     CALL @PRINT_SURVEY_RESULTS $target_pos $target_rot $measured_pos $measured_rot
 
-    FLEXREAD $local_pos geometry.Module_PCB.D
+    FLEXREAD $local_pos geometry.Module_PCB.ETROC_0
+    SUB $local_pos.z $local_pos.z &etroc_thickness
     TRANSFORML2G $target_pos $local_pos $PCB_pos $PCB_rot  
-    ADD $target_rot $PCB_rot 0
+    ADD $target_rot $PCB_rot 180
     CALL @SURVEY_PART $target_pos $target_rot 2 -> $measured_pos $measured_rot
-    PRINT "==Module {$mod_idx} | ETROC D=="
+    PRINT "==Module {$mod_idx} | ETROC 0=="
     CALL @PRINT_SURVEY_RESULTS $target_pos $target_rot $measured_pos $measured_rot
 
     GOTO @SURVEY_LOOP_START
 @SURVEY_LOOP_END
 
-SETVAC "etl_chuck_{$pcb_chuck_num}" 0  # vacuum for assembly plate
+# SETVAC "etl_chuck_{$pcb_chuck_num}" 0  # vacuum for assembly plate
 
 PRINT "Survey Completed"
-MOVENAME home
+# MOVENAME home
 END
 
 
@@ -98,17 +101,17 @@ END
     #  $pos - center of part
     #  $phi - rotation of part in x-y plane
 
-    SETLIGHT 40
-
     GOTOIF @SPC_MODULE_PCB `$part_id==1`
     GOTOIF @SPC_HYBRID `$part_id==2`
     
     @SPC_MODULE_PCB
+	  SETLIGHT 40
       FLEXREAD $pos_default "default.Module_PCB.{$chuck_num}.{$pos_num}.pos"
       FLEXREAD $rot_default "default.Module_PCB.{$chuck_num}.{$pos_num}.rot"
     GOTO @SPC_END_LOAD
 
     @SPC_HYBRID
+	  SETLIGHT 10
       FLEXREAD $pos_default "default.HYBRID.{$chuck_num}.{$pos_num}.pos"
       FLEXREAD $rot_default "default.HYBRID.{$chuck_num}.{$pos_num}.rot"
     GOTO @SPC_END_LOAD
@@ -161,17 +164,14 @@ END
 
     # Turns measured corners or fiducials into center and orientation
     GOTOIF @FIT_MODULE_PCB `$part_id==1`
-    GOTOIF @FIT_ETROC `$part_id==2`
-    GOTOIF @FIT_LGAD `$part_id==3`
+    GOTOIF @FIT_HYBRID `$part_id==2`
 
     @FIT_MODULE_PCB
       FIT $pos $rot $_ Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
       GOTO @FINISH_SURVEY
-    @FIT_ETROC
-      FIT $pos $rot $_ ETROC $tr_corrected $br_corrected $bl_corrected $tl_corrected
+    @FIT_HYBRID
+      FIT $pos $rot $_ HYBRID $tr_corrected $br_corrected $bl_corrected $tl_corrected
       GOTO @FINISH_SURVEY
-    @FIT_LGAD
-      FIT $pos $rot $_ LGAD $tr_corrected $br_corrected $bl_corrected $tl_corrected
 
     @FINISH_SURVEY
     QUAT2EULER $phi $_ $_ $rot

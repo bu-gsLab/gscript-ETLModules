@@ -54,10 +54,10 @@ geometry.Module_PCB.fid_br: {15.01,27.95,0}
 # geometry.Module_PCB.fid_br: {14.91,27.99,0}
 
 #relative positions of where the sub-assemblies will go on the Module PCB
-geometry.Module_PCB.ETROC_0: {10.9,11.7,0}   # br
-geometry.Module_PCB.ETROC_1: {10.9,-11.7,0}  # tr
-geometry.Module_PCB.ETROC_2: {-10.9,11.7,0}  # bl
-geometry.Module_PCB.ETROC_3: {-10.9,-11.7,0} # tl
+geometry.Module_PCB.ETROC_0: {10.9,11.775,0}   # br
+geometry.Module_PCB.ETROC_1: {10.9,-11.775,0}  # tr
+geometry.Module_PCB.ETROC_2: {-10.9,11.775,0}  # bl
+geometry.Module_PCB.ETROC_3: {-10.9,-11.775,0} # tl
 
 # Compensate for ETROC thickness when calculating target positions.
 hybrid_thickness: 0.95
