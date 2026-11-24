@@ -1,0 +1,46 @@
+# Process config for WB Encapsulation
+# Load with LOADCONFIG "" "Scripts\ETLModules\WB Encapsulation\WBE_config.txt"
+
+reference_image.needle_cal1: "Scripts\ETLModules\WB Encapsulation\needle_calibration_ref1.PNG"
+
+# Line 1 spans the top/rear side of the PCB, with ETROC 1 and 3
+line1_start: {-21.0,-24.0,0}
+line1_end: {21.25,-24.0,0}
+
+# Line 2 spans the bottom/front side of the PCB, with ETROC 0 and 2
+line2_start: {-21.0,24.0,0}
+line2_end: {21.25,24.0,0}
+
+#================================================
+#====== Potting procedure parameters
+#================================================
+# The curing parameters are used to adjust the speed of the needle to
+# compensate for the increasing viscosity of the encapsulant as time passes.
+# v = v_nom * (1 - A*t^2 - B*t)
+# For depositing a dot instead of a line, this value scales how long the 
+# dispenser is active
+potting.sylgard.curing_param_a: 1.5e-9
+potting.sylgard.curing_param_b: 7.6e-5
+potting.sylgard.speed_nominal: 0.65 # mm/s
+potting.sylgard.time_nominal: 2.0  # s
+
+# The time delay between turning on the dispenser and beginning motion
+potting.sylgard.turn_on_time: 1 # s
+# The amount of time to preemptively turn off the dispenser before motion ends
+potting.sylgard.turn_off_time: .1 # s
+
+# Nominal distance between the tip of the needle and the surface during
+# encapsulation.
+potting.sylgard.tip_height: 1.2 # mm
+
+# Height of the needle as it moves between pot-lines. Must be high enough to clear
+# any obstacles on the module.
+potting.sylgard.safe_height_offset: 5 # mm
+
+# Position of the inverted calibration needle in gantry coordinates.
+# Telling the gantry to go here will point the gantryhead camera at the needle tip
+potting.needle_cal_pos: {291.397,87.933,97.704}
+
+# Vector pointing from the focal point of the camera to the point of the mounted needle
+# This should be fine-tuned after loading each syringe in the holder.
+potting.needle_cal_default: {109.495,-56.050,7.460}

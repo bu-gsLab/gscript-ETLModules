@@ -1,6 +1,6 @@
 # We assume that assembly on Module PCB position 1 will use ETROC+LGAD subassemblies
-# on position 1, 5, 9, and 13 (ie row 1), while Module PCB position 2 will use 
-# positions 2, 6, 10, and 14, and so on for Module PCB position 3 and 4
+# on position 1, 2, 3, and 4 (ie row 1), while Module PCB position 2 will use 
+# positions 5, 6, 7, and 8, and so on for Module PCB position 3 and 4
 
 VERSION v2.9
 SETLOG TP_ETROC_Assy_{timestamp}.txt
@@ -63,8 +63,8 @@ COPY $mod_idx 0
         INC $chip_idx $chip_idx
         GOTOIF @ETROC_SURVEY_INNER_LOOP_END `$chip_idx>4`
 
-        MUL $loc_offset 4 `$chip_idx-1`
-        ADD $chip_loc $loc_offset $mod_idx 
+        MUL $a 4 `$mod_idx-1`
+        ADD $chip_loc $a $chip_idx
         SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_loc} 1
         CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_loc 2 -> $pos $rot
 
@@ -283,6 +283,7 @@ END
     SETERRORMODE default
     VIDEO
     getpos $fid_position
+    PRINT "    Located fiducial %d at position %.3v" $loc $fid_position
     RETURN $fid_position
 
 

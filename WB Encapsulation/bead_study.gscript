@@ -1,0 +1,105 @@
+SETLOG "ENCAPSULATION.txt"
+CLEARLOG
+LOADCONFIG
+LOADCONFIG "" "Scripts\ETLModules\WB Encapsulation\config.txt"
+
+HOME if-needed
+MOVENAME needle_load
+
+ALERT "Load the syringe with encapsulant"
+ALERT "Enter the time the encapsulant was mixed"
+GETTIME $mix_time
+LOADTOOL syringe_tool
+
+CALL @NEEDLE_CAL -> $needle_offset
+
+MOVENAME needle_load
+CALL @NEEDLE_PURGE
+
+MOVENAME etl_chuck_2
+COPY $bead_length 17 # mm
+COPY $sample_offset {3,3,0}
+
+
+SETVAC etl_chuck_2 1
+COPY $n 0
+COPY $tip_height_inc 0.3   # mm
+COPY $needle_speed_inc 0.1 # mm/s
+@LOOP_START
+    INC $n
+    MOD $col $row $n 4
+    ADD &potting.sylgard.tip_height 0.3 `$tip_height_inc*$row`
+    ADD &potting.sylgard.speed_nominal 0.5 `$needle_speed_inc*$col`
+    CALL @POT_SAMPLE $n $n
+    GOTOIF @LOOP_START `$n<16`
+
+UNLOADTOOL
+MOVENAME needle_load
+END
+
+@NEEDLE_CAL()
+    MOVENAME needle_calibration
+    MOVETO &potting.needle_cal_pos 50
+    # Acquire position 1 with gantryhead cam looking at inverted needle tip
+    SETLIGHT 40
+    VIDEO "" needle_cal1
+    GETPOS $cal_pos_1
+
+    # Safely move to the pre-calibrated position with the loaded needle 2mm above the inverted needle tip
+    MOVETO {$cal_pos_1.x,$cal_pos_1.y,0} 50
+    SUB $cal_pos_2 $cal_pos_1 &potting.needle_cal_default
+    MOVETO {$cal_pos_2.x,$cal_pos_2.y,0} 50
+    SUB $cal_pos_2 $cal_pos_2 {0,0,2}
+    MOVETO $cal_pos_2 50
+    
+    # Now go between the two webcams to line up the two needle tips
+    @NEEDLE_CAL_P2_START
+    VIDEO needlecam1
+    VIDEO needlecam2
+    CHOICEPOPUP $choice "Do you want to continue adjusting the position?" "yes" "no"
+    GOTOIF @NEEDLE_CAL_P2_START $choice
+    GETPOS $cal_pos_2
+    MOVETO {$cal_pos_2.x,$cal_pos_2.y,0} 50
+    MOVENAME needle_calibration
+
+    SUB $needle_offset $cal_pos_1 $cal_pos_2
+    PRINT "Found calibrated needle offset: %.3v" $needle_offset
+    RETURN $needle_offset
+
+@NEEDLE_PURGE()
+    MOVENAME needle_load
+    @NEEDLE_PURGE_START
+    CHOICEPOPUP $choice "Purge needle for 1 second" "continue" "no, it's done"
+    GOTOIFN @NEEDLE_PURGE_END $choice
+    SETDISPENSE 1
+    WAIT 1000 # ms
+    SETDISPENSE 0
+    GOTO @NEEDLE_PURGE_START
+    @NEEDLE_PURGE_END
+    RETURN
+
+@POT_SAMPLE(sample_idx,sample_pos_id)
+  # sample_idx: counter for logging
+  # sample_pos_id: 1-16, which of the positions in the hybrid-stage
+  #                plate on chuck 2 to deposit encapsulant on
+  PAUSE
+  COPY $sample_origin {310.688,484.025,93.559}
+  COPY $pos_offset_y -30.97
+  COPY $pos_offset_x 56.93
+  
+  DEC $sample_pos_idx $sample_pos_id
+  MOD $offset_x_cnt $offset_y_cnt $sample_pos_idx 4
+  MUL $offset_x $pos_offset_x $offset_x_cnt
+  MUL $offset_y $pos_offset_y $offset_y_cnt
+  
+  ADD $sample_start $sample_origin {$offset_x,$offset_y,0}
+  ADD $sample_start $sample_start $sample_offset
+  ADD $sample_end $sample_start {$bead_length,0,0}
+  
+  PRINT "Potting sample %d in position %d" $sample_idx $sample_pos_id
+  PRINT "  Start:  %.3v" $sample_start
+  PRINT "  End:    %.3v" $sample_end
+  PRINT "  Speed:  %.3f mm/s" &potting.sylgard.speed_nominal
+  PRINT "  Height: $.3f mm" &potting.sylgard.tip_height 
+  POTLINE $sample_start $sample_end $needle_offset $mix_time
+  RETURN
